@@ -3,8 +3,13 @@ require 'pg'
 require 'benchmark'
 
 SEED = 11021985
+FILENAME = ENV['STATISTIC_OUTPUT'] || 'riak_vs_postgres.csv'
+UP_TO = 1000
+STEP_SIZE = 10
+runs = 100
+RUN_RATIO = 0.9
+writes = (runs * RUN_RATIO).to_i
 RANDOM_RANGE = [('a'..'z'), ('A'..'Z')].map{ |i| i.to_a }.flatten
-FILENAME = ENV['statistic.csv'] || 'riak_vs_postgres.csv'
 
 File.open(FILENAME,'w'){|f| f.write("db_type,size,user,system,total,real\n")}
 
@@ -17,17 +22,12 @@ def generate_random_string(kbytes)
   random_string
 end
 
-runs = 100
-writes = (runs * 0.9).to_i
-
 Riak.disable_list_keys_warnings = true
 client = Riak::Client.new(:protocol => 'pbc')
 bucket = client.bucket('entities')
 conn = PG.connect( dbname: 'entities' )
 
-(1..10).each do |multi|
-  kbytes = 100 * multi
-
+(1..UP_TO).select{|n| n % STEP_SIZE == 0}.each do |kbytes|
   data_to_write = generate_random_string(kbytes)
 
   conn.exec('drop table if exists documents')
