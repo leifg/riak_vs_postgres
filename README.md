@@ -8,7 +8,7 @@ You need to have [Riak](http://basho.com/riak/) and [Postgres](http://www.postgr
 
 For postgres you need to have a database created with name 'entities'
 
-    createdb -O leifg -E utf8 entities
+    createdb -O <user> -E utf8 entities
 
 ## Running
 
