@@ -4,6 +4,9 @@ require 'benchmark'
 
 SEED = 11021985
 RANDOM_RANGE = [('a'..'z'), ('A'..'Z')].map{ |i| i.to_a }.flatten
+FILENAME = ENV['statistic.csv'] || 'riak_vs_postgres.csv'
+
+File.open(FILENAME,'w'){|f| f.write("db_type,size,user,system,total,real\n")}
 
 def generate_random_string(kbytes)
   string_random = Random.new
@@ -18,7 +21,7 @@ runs = 100
 writes = (runs * 0.9).to_i
 
 Riak.disable_list_keys_warnings = true
-client = Riak::Client.new(:protocol => "pbc")
+client = Riak::Client.new(:protocol => 'pbc')
 bucket = client.bucket('entities')
 conn = PG.connect( dbname: 'entities' )
 
@@ -32,7 +35,7 @@ conn = PG.connect( dbname: 'entities' )
   conn.exec('create unique index on documents (id)')
 
   Benchmark.bm do |x|
-    x.report("Postgres #{kbytes} KB") do
+    pg_res = x.report("Postgres #{kbytes} KB") do
       r = Random.new(SEED)
       runs.times do
         id = r.rand(writes)
@@ -43,9 +46,10 @@ conn = PG.connect( dbname: 'entities' )
         end
       end
     end
+    File.open(FILENAME,'a'){|f| f.write("postgres,#{kbytes * 1024},#{pg_res.utime},#{pg_res.stime},#{pg_res.total},#{pg_res.real}\n")}
 
     r = Random.new(SEED)
-    x.report("Riak     #{kbytes} KB") do
+    riak_res = x.report("Riak     #{kbytes} KB") do
       runs.times do
         id = "listing_#{r.rand(writes)}"
         object = Riak::RObject.new(bucket, id)
@@ -54,5 +58,6 @@ conn = PG.connect( dbname: 'entities' )
         object.store
       end
     end
+    File.open(FILENAME,'a'){|f| f.write("riak,#{kbytes * 1024},#{riak_res.utime},#{riak_res.stime},#{riak_res.total},#{riak_res.real}\n")}
   end
 end
