@@ -47,8 +47,15 @@ conn = PG.connect( dbname: 'entities' )
       end
     end
     File.open(FILENAME,'a'){|f| f.write("postgres,#{kbytes * 1024},#{pg_res.utime},#{pg_res.stime},#{pg_res.total},#{pg_res.real}\n")}
+  end
+end
 
-    r = Random.new(SEED)
+(1..UP_TO).select{|n| n % STEP_SIZE == 0}.each do |kbytes|
+  data_to_write = generate_random_string(kbytes)
+  bucket.keys.map{|k| bucket.delete(k)}
+
+  r = Random.new(SEED)
+  Benchmark.bm do |x|
     riak_res = x.report("Riak     #{kbytes} KB") do
       runs.times do
         id = "listing_#{r.rand(writes)}"
